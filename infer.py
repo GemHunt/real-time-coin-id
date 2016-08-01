@@ -12,10 +12,26 @@ import caffe
 # Set the right path to your model definition file, pretrained model weights,
 # and the image you would like to classify.
 model_dir = 'copper60/'
+image_dir = 'test-images/'
 MODEL_FILE = model_dir + 'deploy.prototxt'
 PRETRAINED = model_dir + 'snapshot.caffemodel'
-IMAGE_FILE = 'temp.png'
+meanFile = model_dir + 'mean.binaryproto'
+IMAGE_FILE = image_dir +  'temp.png' 
 
-net = caffe.Classifier(MODEL_FILE, PRETRAINED, image_dims=(28, 28), raw_scale=255)
-score = net.predict([caffe.io.load_image(IMAGE_FILE, color=False)], oversample=False)
-print score
+
+# Open mean.binaryproto file
+blob = caffe.proto.caffe_pb2.BlobProto()
+data = open(meanFile , 'rb').read()
+blob.ParseFromString(data)
+mean_arr = np.array(caffe.io.blobproto_to_array(blob)).reshape(1,60,60)
+print mean_arr.shape
+
+net = caffe.Classifier(MODEL_FILE, PRETRAINED, image_dims=(60, 60), mean = mean_arr, raw_scale=255)
+
+coinImage = [caffe.io.load_image(IMAGE_FILE, color=False)]
+
+for sec in range(1,10):
+	for num in range(1,30):
+		score = net.predict(coinImage, oversample=False)
+	print score
+
