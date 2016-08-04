@@ -1,13 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Make sure that caffe is on the python path:
-#caffe_root = '/home/pkrush/'  # this file is expected to be in {caffe_root}/examples
 import sys
-#sys.path.insert(0, caffe_root + 'python')
-sys.path.append('/home/pkrush/caffe/python')
 
+# Make sure that caffe is on the python path:
+#sys.path.append('~/caffe/python') using the ~ does not work, for some reason???
+sys.path.append('/home/pkrush/caffe/python')
 import caffe
+
 
 # Set the right path to your model definition file, pretrained model weights,
 # and the image you would like to classify.
