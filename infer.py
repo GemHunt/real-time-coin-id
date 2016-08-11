@@ -27,6 +27,12 @@ def get_classifier(model_name, crop_size):
     return net;
 
 
+def get_labels(model_name):
+    labels_file = model_name + '/labels.txt'
+    labels = [line.rstrip('\n') for line in open(labels_file)]
+    return labels;
+
+
 def get_caffe_image(crop, crop_size):
     # this is how you get the image from file:
     # coinImage = [caffe.io.load_image("some file", color=False)]
@@ -44,10 +50,17 @@ def rotate(img, angle):
     cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
     return img;
 
+def crop_for_date(src):
+    dst = src[307:307 + 64, 250:250 + 64]
+    dst = src[250:250 + 64, 307:307 + 64]
+    dst = cv2.resize(dst, (28, 28), interpolation=cv2.INTER_AREA)
+    return dst;
+
 
 cap = cv2.VideoCapture(1)
 copper60 = get_classifier("copper60", 60)
 heads_with_rotation64 = get_classifier("heads-with-rotation64", 64)
+dates_over_50 = get_classifier("dates-over-50", 28)
 count = 0
 while (True):
     # Capture frame-by-frame
@@ -68,8 +81,19 @@ while (True):
     angle = np.argmax(heads_with_rotation64_score)
     rotated = rotate(gray,360-angle)
     cv2.imshow('rotated', rotated)
-    print max_value,angle
+    #print max_value,angle
+    dateCrop = crop_for_date(rotated)
+    cv2.imshow('dateCrop', dateCrop)
 
+    dates_over_50_score = dates_over_50.predict(get_caffe_image(dateCrop, 28), oversample=False)
+    #print dates_over_50_score
+    date_labels = get_labels("dates-over-50")
+    predicted_date = date_labels[np.argmax(dates_over_50_score)]
+    #print predicted_date
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(rotated, predicted_date, (300,240),font, 1,(0,0,0),2)
+
+    cv2.imshow('rotated', rotated)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
