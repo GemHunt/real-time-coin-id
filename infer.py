@@ -8,7 +8,8 @@ import cv2
 sys.path.append('/home/pkrush/caffe/python')
 import caffe
 
-def get_classifier(model_name,crop_size):
+
+def get_classifier(model_name, crop_size):
     model_dir = model_name + '/'
     image_dir = 'test-images/'
     MODEL_FILE = model_dir + 'deploy.prototxt'
@@ -26,20 +27,27 @@ def get_classifier(model_name,crop_size):
     return net;
 
 
-def get_caffe_image(crop,crop_size):
-    #this is how you get the image from file:
-    #coinImage = [caffe.io.load_image("some file", color=False)]
+def get_caffe_image(crop, crop_size):
+    # this is how you get the image from file:
+    # coinImage = [caffe.io.load_image("some file", color=False)]
 
     caffe_image = cv2.resize(crop, (crop_size, crop_size), interpolation=cv2.INTER_AREA)
     caffe_image = caffe_image.astype(np.float32) / 255
     caffe_image = np.array(caffe_image).reshape(crop_size, crop_size, 1)
-    #OK caffe wants a list:
+    # Caffe wants a list so []:
     return [caffe_image];
 
 
+def rotate(img, angle):
+    rows, cols = img.shape
+    M = cv2.getRotationMatrix2D((cols / 2, rows / 2), angle, 1)
+    cv2.warpAffine(img, M, (cols, rows),img, cv2.INTER_CUBIC)
+    return img;
+
+
 cap = cv2.VideoCapture(1)
-copper60 = get_classifier("copper60",60)
-heads_with_rotation64 = get_classifier("heads-with-rotation64",64)
+copper60 = get_classifier("copper60", 60)
+heads_with_rotation64 = get_classifier("heads-with-rotation64", 64)
 count = 0
 while (True):
     # Capture frame-by-frame
@@ -47,16 +55,21 @@ while (True):
 
     # Our operations on the frame come here
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray = gray[40:470, 110:540]
+    gray = gray[27:433, 117:523]
     cv2.imshow('frame', gray)
 
-
-    copper60_score = copper60.predict(get_caffe_image(gray,60), oversample=False)
+    copper60_score = copper60.predict(get_caffe_image(gray, 60), oversample=False)
     #print copper60_score
     heads_with_rotation64_score = heads_with_rotation64.predict(get_caffe_image(gray, 64), oversample=False)
     #print heads_with_rotation64_score
     count = count + 1
-    print count
+    #print count
+    max_value = np.amax(heads_with_rotation64_score)
+    angle = np.argmax(heads_with_rotation64_score)
+    rotated = rotate(gray,360-angle)
+    cv2.imshow('rotated', rotated)
+    print max_value,angle
+
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
@@ -64,5 +77,3 @@ while (True):
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
-
-
