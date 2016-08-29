@@ -55,29 +55,34 @@ def crop_for_date(src):
     return dst;
 
 
-cap = cv2.VideoCapture(1)
 copper60 = get_classifier("copper60", 60)
 heads_with_rotation64 = get_classifier("heads-with-rotation64", 64)
 dates_over_50 = get_classifier("dates-over-50", 28)
 count = 0
-while (True):
-    # Capture frame-by-frame
-    ret, frame = cap.read()
 
-    # Our operations on the frame come here
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray = gray[27:433, 117:523]
-    cv2.imshow('frame', gray)
 
-    copper60_score = copper60.predict(get_caffe_image(gray, 60), oversample=False)
-    #print copper60_score
-    heads_with_rotation64_score = heads_with_rotation64.predict(get_caffe_image(gray, 64), oversample=False)
-    #print heads_with_rotation64_score
+import glob
+
+copper60_labels = get_labels('copper60')
+date_labels = get_labels("dates-over-50")
+
+for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
     count = count + 1
+    crop = cv2.imread(filename)
+    crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    crop = cv2.resize(crop, (406,406), interpolation=cv2.INTER_AREA)
+    cv2.imshow('gray', crop)
+
+
+    copper60_score = copper60.predict(get_caffe_image(crop, 60), oversample=False)
+    coin_type = copper60_labels[np.argmax(copper60_score)]
+    print coin_type
+    heads_with_rotation64_score = heads_with_rotation64.predict(get_caffe_image(crop, 64), oversample=False)
+    #print heads_with_rotation64_score
     #print count
     max_value = np.amax(heads_with_rotation64_score)
     angle = np.argmax(heads_with_rotation64_score)
-    rotated = rotate(gray,360-angle)
+    rotated = rotate(crop,360-angle)
     cv2.imshow('rotated', rotated)
     #print max_value,angle
     dateCrop = crop_for_date(rotated)
@@ -85,17 +90,15 @@ while (True):
 
     dates_over_50_score = dates_over_50.predict(get_caffe_image(dateCrop, 28), oversample=False)
     #print dates_over_50_score
-    date_labels = get_labels("dates-over-50")
     predicted_date = date_labels[np.argmax(dates_over_50_score)]
     #print predicted_date
     font = cv2.FONT_HERSHEY_SIMPLEX
     cv2.putText(rotated, predicted_date, (300,240),font, 1,(0,0,0),2)
 
     cv2.imshow('rotated', rotated)
-
+    cv2.waitKey(0)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 # When everything done, release the capture
-cap.release()
 cv2.destroyAllWindows()
