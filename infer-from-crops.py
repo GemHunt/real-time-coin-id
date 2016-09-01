@@ -66,7 +66,15 @@ import glob
 copper60_labels = get_labels('copper60')
 date_labels = get_labels("dates-over-50")
 
+import sqlite3
+conn = sqlite3.connect('/home/pkrush/2-camera-scripts/coins.db')
+
+c = conn.cursor()
+
 for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
+    imageID = filename[-9:]
+    imageID = imageID[:5]
+
     count = count + 1
     crop = cv2.imread(filename)
     crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
@@ -96,8 +104,18 @@ for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
     cv2.putText(rotated, predicted_date, (300,240),font, 1,(0,0,0),2)
 
     cv2.imshow('rotated', rotated)
-    cv2.waitKey(0)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    cv2.moveWindow('rotated',600,0)
+    pressed_key = cv2.waitKey(0)
+
+    if pressed_key & 0xFF == ord('a'):
+        sql = 'update coincenters set heads = 1, angle = ' + str(angle) + ' where imageID = ' + imageID
+        print sql
+        c.execute(sql)
+        conn.commit()
+    if pressed_key & 0xFF == ord('d'):
+        c.execute('update coincenters set heads = 1, angle = ' + str(angle) + ', coinDate = ' + str(predicted_date) + ' where imageID = ' + imageID)
+        conn.commit()
+    if pressed_key & 0xFF == ord('q'):
         break
 
 # When everything done, release the capture
