@@ -1,3 +1,8 @@
+#This works right now for a web cam. It would be nice if this was refactored into classes.
+#This does not find the center of the coin or resize right now.
+#so it's expecting the height of the camera to be adjusted so the penny is 406 pixals in diameter.
+#you have to move the penny to get to the correct spot to be cropped out.
+
 import numpy as np
 import matplotlib.pyplot as plt
 import sys

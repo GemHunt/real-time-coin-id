@@ -1,3 +1,8 @@
+#This requires the 2-camera-scripts repo as well.
+#Not sure how to stuctures this for now...
+#I really should keep this repo limited to just inferance.
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
