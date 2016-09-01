@@ -75,13 +75,25 @@ import sqlite3
 conn = sqlite3.connect('/home/pkrush/2-camera-scripts/coins.db')
 
 c = conn.cursor()
+with open ("images-not-labeled-with-an-angle.sql", "r") as myfile:
+    sql=myfile.read()
 
-for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
-    imageID = filename[-9:]
-    imageID = imageID[:5]
 
+c.execute(sql)
+imageIDs = c.fetchall()
+
+
+#for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
+#    imageID = filename[-9:]
+#    imageID = imageID[:5]
+
+for imageID in imageIDs:
+    imageID = str(imageID[0])
     count = count + 1
+    filename = '/home/pkrush/2-camera-scripts/crops/' + imageID + '.png'
     crop = cv2.imread(filename)
+    if crop is None:
+        continue
     crop = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     crop = cv2.resize(crop, (406,406), interpolation=cv2.INTER_AREA)
     cv2.imshow('gray', crop)
@@ -113,12 +125,15 @@ for filename in glob.iglob('/home/pkrush/2-camera-scripts/crops/*.png'):
     pressed_key = cv2.waitKey(0)
 
     if pressed_key & 0xFF == ord('a'):
-        sql = 'update coincenters set heads = 1, angle = ' + str(angle) + ' where imageID = ' + imageID
+        sql = 'update images set heads = 1, angle = ' + str(angle) + ' where imageID = ' + imageID
         print sql
         c.execute(sql)
         conn.commit()
-    if pressed_key & 0xFF == ord('d'):
-        c.execute('update coincenters set heads = 1, angle = ' + str(angle) + ', coinDate = ' + str(predicted_date) + ' where imageID = ' + imageID)
+    if pressed_key & 0xFF == ord('b'):
+        c.execute('update images set heads = 1 where imageID = ' + imageID)
+        conn.commit()
+    if pressed_key & 0xFF == ord('t'):
+        c.execute('update images set heads = 0 where imageID = ' + imageID)
         conn.commit()
     if pressed_key & 0xFF == ord('q'):
         break
