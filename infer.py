@@ -68,11 +68,24 @@ count = 0
 while (True):
     # Capture frame-by-frame
     ret, frame = cap.read()
+    cv2.imshow('frame', frame)
 
     # Our operations on the frame come here
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray = gray[27:433, 117:523]
-    cv2.imshow('frame', gray)
+
+    #OK this is silly I need to grab the center
+    center_x = 229
+    center_y = 251
+
+    crop_radius = 229
+
+    #for the microscope camera and cropping to 406 square:
+    #gray = gray[27:433, 117:523]
+    gray = gray[center_y - crop_radius:center_y + crop_radius,center_x - crop_radius:center_x + crop_radius]
+    gray = cv2.resize(gray, (406, 406), interpolation=cv2.INTER_AREA)
+    cv2.imshow('crop', gray)
+
+
 
     copper60_score = copper60.predict(get_caffe_image(gray, 60), oversample=False)
     #print copper60_score
