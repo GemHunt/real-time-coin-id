@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import cv2
+import cv2.cv as cv
 
 # Make sure that caffe is on the python path:
 # sys.path.append('~/caffe/python') using the ~ does not work, for some reason???
@@ -68,16 +69,37 @@ count = 0
 while (True):
     # Capture frame-by-frame
     ret, frame = cap.read()
-    cv2.imshow('frame', frame)
 
     # Our operations on the frame come here
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    cv2.waitKey(100)
 
-    #OK this is silly I need to grab the center
-    center_x = 229
-    center_y = 251
 
-    crop_radius = 229
+    center_x = 0
+    center_y = 0
+    crop_radius = 0
+    cv2.imshow('frame', frame)
+    circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=50, param2=30, minRadius=196, maxRadius=198)
+    if circles is None:
+        continue
+
+    circles = np.uint16(np.around(circles))
+
+    for i in circles[0, :]:
+        cv2.circle(frame, (i[0], i[1]), i[2], (0, 255, 0), 1)
+        cv2.circle(frame, (i[0], i[1]), 2, (0, 0, 255), 1)
+        center_x = i[0]
+        center_y = i[1]
+        crop_radius = i[2]
+        print circles
+        cv2.imshow('detected circles', frame)
+
+    if center_x < crop_radius:
+        continue
+
+    crop_end_x = center_x + crop_radius
+    if crop_end_x > gray.shape[1]:
+        continue
 
     #for the microscope camera and cropping to 406 square:
     #gray = gray[27:433, 117:523]
