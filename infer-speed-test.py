@@ -86,83 +86,32 @@ def deskew(src, pixel_shift):
     cv2.warpAffine(src, warp_mat, (cols, rows), src, cv2.INTER_CUBIC)
     return src
 
-cap = cv2.VideoCapture(1)
+frame = cv2.imread('30057.png')
 copper60 = get_classifier("copper60", 60)
 heads_with_rotation64 = get_classifier("heads-with-rotation64", 64)
 dates_over_50 = get_classifier("dates-over-50", 28)
 count = 0
+gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+gray = cv2.resize(gray, (406, 406), interpolation=cv2.INTER_AREA)
+
 while (True):
-    # Capture frame-by-frame
-    ret, frame = cap.read()
-
-    deskewed = deskew(frame, 5)
-
-    cv2.imshow('deskewed', deskewed)
-    # Our operations on the frame come here
-    gray = cv2.cvtColor(deskewed, cv2.COLOR_BGR2GRAY)
-
-    center_x = 0
-    center_y = 0
-    crop_radius = 0
-    cv2.imshow('frame', gray)
-    cv2.waitKey(1)
-    #circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=50, param2=30, minRadius=196, maxRadius=198)
-    circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=50, param2=30, minRadius=195, maxRadius=198)
-
-    if circles is None:
-        continue
-
-    circles = np.uint16(np.around(circles))
-
-    for i in circles[0, :]:
-        cv2.circle(frame, (i[0], i[1]), i[2], (0, 255, 0), 1)
-        cv2.circle(frame, (i[0], i[1]), 2, (0, 0, 255), 1)
-        center_x = i[0]
-        center_y = i[1]
-        crop_radius = i[2]
-        print circles
-        cv2.imshow('detected circles', frame)
-
-    if center_x < crop_radius:
-        continue
-
-    crop_end_x = center_x + crop_radius
-    if crop_end_x > gray.shape[1]:
-        continue
-
-    # for the microscope camera and cropping to 406 square:
-    # gray = gray[27:433, 117:523]
-    gray = gray[center_y - crop_radius:center_y + crop_radius, center_x - crop_radius:center_x + crop_radius]
-    gray = cv2.resize(gray, (406, 406), interpolation=cv2.INTER_AREA)
-    cv2.imshow('crop', gray)
-
     copper60_score = copper60.predict(get_caffe_image(gray, 60), oversample=False)
-    # print copper60_score
+    print copper60_score
     heads_with_rotation64_score = heads_with_rotation64.predict(get_caffe_image(gray, 64), oversample=False)
-    # print heads_with_rotation64_score
+    print heads_with_rotation64_score
     count = count + 1
-    # print count
+    print count
     max_value = np.amax(heads_with_rotation64_score)
     angle = np.argmax(heads_with_rotation64_score)
     rotated = rotate(gray, 360 - angle)
-    cv2.imshow('rotated', rotated)
-    # print max_value,angle
+    print max_value,angle
     dateCrop = crop_for_date(rotated)
-    cv2.imshow('dateCrop', dateCrop)
 
     dates_over_50_score = dates_over_50.predict(get_caffe_image(dateCrop, 28), oversample=False)
-    # print dates_over_50_score
+    print dates_over_50_score
     date_labels = get_labels("dates-over-50")
     predicted_date = date_labels[np.argmax(dates_over_50_score)]
-    # print predicted_date
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    cv2.putText(rotated, predicted_date, (300, 240), font, 1, (0, 0, 0), 2)
-
-    cv2.imshow('rotated', rotated)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    print predicted_date
 
 # When everything done, release the capture
-cap.release()
 cv2.destroyAllWindows()
