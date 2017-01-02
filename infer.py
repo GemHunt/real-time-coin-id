@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import sys
 import cv2
 import cv2.cv as cv
+import time
+
 
 # Make sure that caffe is on the python path:
 # sys.path.append('~/caffe/python') using the ~ does not work, for some reason???
@@ -83,18 +85,23 @@ def deskew(src, pixel_shift):
     cv2.warpAffine(src, warp_mat, (cols, rows), src, cv2.INTER_CUBIC)
     return src
 
-cap = cv2.VideoCapture(1)
-copper60 = get_classifier("copper60", 60)
-heads_with_rotation64 = get_classifier("heads-with-rotation64", 64)
-dates_over_50 = get_classifier("dates-over-50", 28)
+
+cap = cv2.VideoCapture(0)
+#copper60 = get_classifier("copper60", 60)
+#heads_with_rotation64 = get_classifier("heads-with-rotation64", 64)
+#dates_over_50 = get_classifier("dates-over-50", 28)
 count = 0
 while (True):
     # Capture frame-by-frame
+    start_time = time.time()
     ret, frame = cap.read()
+    #deskewed = deskew(frame, 5)
+    cv2.imshow('frame', frame)
 
-    deskewed = deskew(frame, 5)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    continue
 
-    cv2.imshow('deskewed', deskewed)
     # Our operations on the frame come here
     gray = cv2.cvtColor(deskewed, cv2.COLOR_BGR2GRAY)
 
