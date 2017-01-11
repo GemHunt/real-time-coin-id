@@ -30,7 +30,7 @@ cap.set(3,1920)
 cap.set(4,1080)
 
 count = 0
-coin_count = 145
+coin_count = 306
 while (True):
     # Capture frame-by-frame
     cv.WaitKey(2)
@@ -40,7 +40,7 @@ while (True):
     if frame == None:
         #print 'None in %s seconds' % (time.time() - start_time,)
         continue
-
+    #cv2.imwrite('/home/pkrush/cents/hd/' + str(coin_count).zfill(5) + str(count).zfill(2) + '.png', frame)
     frame = cv2.resize(frame, (960, 540), interpolation=cv2.INTER_AREA)
     cv2.imshow('frame', frame)
     frame = deskew(frame,-9)
@@ -57,8 +57,8 @@ while (True):
         center_x = i[0]
         center_y = i[1]
         crop_radius = i[2]
-        cv2.circle(frame, (center_x, center_y), crop_radius, (0, 255, 0), 1)
-        cv2.circle(frame, (center_x, center_y), 2, (0, 0, 255), 1)
+        # cv2.circle(frame, (center_x, center_y), crop_radius, (0, 255, 0), 1)
+        # cv2.circle(frame, (center_x, center_y), 2, (0, 0, 255), 1)
         print circles
         cv2.imshow('detected circles', frame)
         center_start_x = 330
@@ -71,7 +71,9 @@ while (True):
             print count
             crop = frame[center_y - 224:center_y + 224, center_x - 224:center_x + 224]
             cv2.imshow('crop', crop)
-            cv2.imwrite(str(coin_count).zfill(5) + '_' + str(count).zfill(2) + '.png', crop)
+            filename = '/home/pkrush/cents/' + str(coin_count) + str(count).zfill(2) + '.png'
+            print filename
+            cv2.imwrite(filename, crop)
             count += 1
 
     #red = frame[:, :, 2]
