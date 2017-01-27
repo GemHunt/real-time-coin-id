@@ -23,8 +23,6 @@ def deskew(src, pixel_shift):
     cv2.warpAffine(src, warp_mat, (cols, rows), src, cv2.INTER_CUBIC)
     return src
 
-
-
 cap = cv2.VideoCapture(0)
 cap.set(3,1920)
 cap.set(4,1080)
@@ -40,7 +38,7 @@ while (True):
     if frame == None:
         #print 'None in %s seconds' % (time.time() - start_time,)
         continue
-    #cv2.imwrite('/home/pkrush/cents/hd/' + str(coin_count).zfill(5) + str(count).zfill(2) + '.png', frame)
+    #cv2.imwrite('/home/pkrush/cents-hd/' + str(coin_count).zfill(5) + str(count).zfill(2) + '.png', frame)
     frame = cv2.resize(frame, (960, 540), interpolation=cv2.INTER_AREA)
     cv2.imshow('frame', frame)
     frame = deskew(frame,-9)
