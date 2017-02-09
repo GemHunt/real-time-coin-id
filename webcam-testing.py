@@ -5,9 +5,9 @@ import cv2
 import cv2.cv as cv
 import time
 
-cap = cv2.VideoCapture(0)
-#cap.set(3,1920)
-#cap.set(4,1080)
+cap = cv2.VideoCapture(2)
+cap.set(3,1920)
+cap.set(4,1080)
 
 for x in range(0,400000):
     # Capture frame-by-frame

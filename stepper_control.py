@@ -4,14 +4,11 @@ import sys
 import cv2
 import numpy as np
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 # configure the serial connections (the parameters differs on the device you are connecting to)
 ser = serial.Serial(port='/dev/ttyUSB1', baudrate=9600)
 
-
 time.sleep(1)
-
-
 
 # for input in range(0,16):
 #     out = ''
@@ -66,8 +63,7 @@ for x in range(0,400000):
 
 
     if input_key == ord('q'):
-        motor0 = 0
-        motor1 = 0
+        motor0 = 3
     if input_key == ord('a'):
         motor0 = 0
     if input_key == ord('z'):

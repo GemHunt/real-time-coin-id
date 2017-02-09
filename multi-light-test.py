@@ -71,7 +71,7 @@ while (True):
             cv2.imshow('crop', crop)
             filename = '/home/pkrush/cents/' + str(coin_count) + str(count).zfill(2) + '.png'
             print filename
-            cv2.imwrite(filename, crop)
+            #cv2.imwrite(filename, crop)
             count += 1
 
     #red = frame[:, :, 2]
