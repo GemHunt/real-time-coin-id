@@ -1,0 +1,119 @@
+import numpy as np
+import time
+
+import cv2
+import cv2.cv as cv
+
+
+def deskew(src, pixel_shift):
+    src_tri = np.zeros((3, 2), dtype=np.float32)
+    dst_tri = np.zeros((3, 2), dtype=np.float32)
+
+    rows, cols, ch = src.shape
+
+    # Set your 3 points to calculate the  Affine Transform
+    src_tri[1] = [cols - 1, 0]
+    src_tri[2] = [0, rows - 1]
+    # dstTri is the same except the bottom is moved over shiftpixels:
+    dst_tri[1] = src_tri[1]
+    dst_tri[2] = [pixel_shift, rows - 1]
+
+    # Get the Affine Transform
+    warp_mat = cv2.getAffineTransform(src_tri, dst_tri)
+
+    ## Apply the Affine Transform just found to the src image
+    cv2.warpAffine(src, warp_mat, (cols, rows), src, cv2.INTER_CUBIC)
+    return src
+
+
+cap = cv2.VideoCapture(2)
+cap.set(3, 1920)
+cap.set(4, 1080)
+
+count = 0
+coin_count = 0
+center_list = []
+while (True):
+    # Capture frame-by-frame
+    cv.WaitKey(2)
+    start_time = time.time()
+    ret, frame = cap.read()
+    # deskewed = deskew(frame, 5)
+    if frame == None:
+        # print 'None in %s seconds' % (time.time() - start_time,)
+        continue
+    # cv2.imwrite('/home/pkrush/cents-hd/' + str(coin_count).zfill(5) + str(count).zfill(2) + '.png', frame)
+    coin_size_adjustment_factor = 1.03
+    frame_width = int(960 * coin_size_adjustment_factor)
+    frame_hieght = int(540 * coin_size_adjustment_factor)
+    frame = cv2.resize(frame, (frame_width, frame_hieght), interpolation=cv2.INTER_AREA)
+
+    # cv2.imshow('frame', frame)
+    # frame = deskew(frame,-9)  #100 rpm
+    # frame = deskew(frame, -30)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=50, param2=30, minRadius=448, maxRadius=450)
+
+    # good for scanning:
+    # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=222, maxRadius=226)
+    circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=215, maxRadius=224)
+
+    if circles is None:
+        continue
+
+    circles = np.uint16(np.around(circles))
+
+    for i in circles[0, :]:
+        center_x = i[0]
+        center_y = i[1]
+        crop_radius = i[2]
+        # cv2.circle(frame, (center_x, center_y), 2, (0, 0, 255), 1)
+        # print circles
+        cv2.imshow('detected circles', frame)
+        center_start_x = 330
+        center_end_x = 670
+        if count > 10 and center_x > center_end_x:
+            count = 0
+            coin_count += 1
+
+        if center_start_x < center_x < center_end_x:
+            sample_size = 40
+            center_list.append([center_x, center_y, crop_radius])
+            if len(center_list) > sample_size:
+                total_center_x = 0
+                total_center_y = 0
+                total_radius = 0
+
+                for past_x, past_y, past_radius in center_list[len(center_list) - sample_size:len(center_list)]:
+                    total_center_x += past_x
+                    total_center_y += past_y
+                    total_radius += past_radius
+
+                average_center_x = float(total_center_x) / sample_size
+                average_center_y = float(total_center_y) / sample_size
+                average_radius = float(total_radius) / sample_size
+
+                print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                cv2.circle(frame, (int(average_center_x), int(average_center_y)), int(average_radius), (0, 255, 0), 1)
+                # crop = frame[center_y - 224:center_y + 224, center_x - 224:center_x + 224]
+                crop = frame[average_center_y - 224:average_center_y + 224,
+                       average_center_x - 224:average_center_x + 224]
+                cv2.putText(crop, str(average_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
+
+                cv2.imshow('crop', crop)
+                filename = '/home/pkrush/cents-test/' + str(coin_count) + str(count).zfill(2) + '.png'
+            # print filename
+            # cv2.imwrite(filename, crop)
+            count += 1
+
+    # red = frame[:, :, 2]
+    # green = frame[:, :, 1]
+    # blue = frame[:, :, 0]
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+        # print 'In %s seconds' % (time.time() - start_time,)
+
+cap.release()
+cv2.destroyAllWindows()

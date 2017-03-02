@@ -1,9 +1,8 @@
 #This is just used to see the webcam output
 
-import numpy as np
-import cv2
-import cv2.cv as cv
 import time
+
+import cv2
 
 cap = cv2.VideoCapture(2)
 cap.set(3,1920)
@@ -13,13 +12,19 @@ for x in range(0,400000):
     # Capture frame-by-frame
     start_time = time.time()
     ret, frame = cap.read()
+
     #deskewed = deskew(frame, 5)
     if frame == None:
         #print 'None in %s seconds' % (time.time() - start_time,)
         continue
     #cv2.imwrite(str(x) + '.png', frame)
     #frame = cv2.resize(frame, (960, 540), interpolation=cv2.INTER_AREA)
+    coin_size_adjustment_factor = 1.8
+    frame_width = int(960 * coin_size_adjustment_factor)
+    frame_hieght = int(540 * coin_size_adjustment_factor)
+    frame = cv2.resize(frame, (frame_width, frame_hieght), interpolation=cv2.INTER_AREA)
     cv2.imshow('frame', frame)
+
     #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     #red = frame[:, :, 2]
