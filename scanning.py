@@ -138,8 +138,18 @@ while (True):
                 image_id = count - 5
                 filename = '/home/pkrush/cents-test/' + str(coin_count) + str(image_id).zfill(2) + '.png'
                 cv2.imwrite(filename, crop)
-            if found_coin == True and count < 49:
+            if count == 39:
+                ser.write(str(102) + "\n")
+                cv.WaitKey(3500)
+                ser.write(str(100) + "\n")
+                cv.WaitKey(100)
+                ser.write(str(101) + "\n")
+                count = 0
+                found_coin = False
+                coin_count += 1
+            if found_coin == True:
                 count += 1
+
     # red = frame[:, :, 2]
     # green = frame[:, :, 1]
     # blue = frame[:, :, 0]
@@ -147,6 +157,12 @@ while (True):
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     print '8 In %s seconds' % (time.time() - start_time,)
+
+ser.write(str(102) + "\n")
+cv.WaitKey(3500)
+ser.write(str(100) + "\n")
+cv.WaitKey(100)
+ser.write(str(101) + "\n")
 
 cap.release()
 cv2.destroyAllWindows()
