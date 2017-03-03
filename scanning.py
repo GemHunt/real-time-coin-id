@@ -36,7 +36,6 @@ count = 0
 coin_count = 0
 center_list = []
 found_coin = False
-frame_buffer_count = 6
 while (True):
     # Capture frame-by-frame
     cv.WaitKey(2)
@@ -135,16 +134,12 @@ while (True):
             #cv2.putText(crop, str(average_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
 
             cv2.imshow('crop', crop)
-            if count > 4 or count < 40:
+            if count > 4 and count < 40:
                 image_id = count - 5
-            filename = '/home/pkrush/cents-test/' + str(coin_count) + str(count).zfill(2) + '.png'
-            # print filename
-            cv2.imwrite(filename, crop)
+                filename = '/home/pkrush/cents-test/' + str(coin_count) + str(image_id).zfill(2) + '.png'
+                cv2.imwrite(filename, crop)
             if found_coin == True and count < 49:
-                if frame_buffer_count != 0:
-                    frame_buffer_count -= 1
-                else:
-                    count += 1
+                count += 1
     # red = frame[:, :, 2]
     # green = frame[:, :, 1]
     # blue = frame[:, :, 0]
