@@ -27,10 +27,10 @@ def deskew(src, pixel_shift):
     return src
 
 
-ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
+ser = serial.Serial(port='/dev/ttyUSB1', baudrate=115200)
 cap = cv2.VideoCapture(0)
-cap.set(3, 1280)
-cap.set(4, 1024)
+cap.set(3, 1900)
+cap.set(4, 1080)
 
 count = 0
 coin_count = 0
@@ -50,7 +50,14 @@ while (True):
     print '2 In %s seconds' % (time.time() - start_time,)
     # frame = frame[460:,40:1040]
 
-    coin_size_adjustment_factor = 1.06
+
+    # bottom camera:
+    # coin_size_adjustment_factor = 1.06
+
+    # top_camera:
+    coin_size_adjustment_factor = .8
+
+
     frame_width = int(640 * coin_size_adjustment_factor)
     frame_hieght = int(512 * coin_size_adjustment_factor)
     print '3 In %s seconds' % (time.time() - start_time,)
@@ -68,7 +75,12 @@ while (True):
     # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=222, maxRadius=226)
     print '6 In %s seconds' % (time.time() - start_time,)
 
+    #Bottom Camera
     circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=215, maxRadius=224)
+
+    # Top Camera:
+    #circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=290, maxRadius=295)
+
     print '7 In %s seconds' % (time.time() - start_time,)
 
     if circles is None:
@@ -78,15 +90,17 @@ while (True):
 
     print 'circles:', len(circles)
 
-
     for i in circles[0, :]:
         center_x = i[0]
         center_y = i[1]
         crop_radius = i[2]
         # cv2.circle(frame, (center_x, center_y), 2, (0, 0, 255), 1)
+        #cv2.circle(frame, (center_x, center_y), crop_radius, (0, 0, 255), 1)
         # print circles
         cv2.imshow('detected circles', frame)
+
         center_stop = 250
+        center_stop = 10
         print center_x, "   ", center_y, "     ", crop_radius
         if center_x > center_stop:
             print center_x
@@ -98,57 +112,58 @@ while (True):
                 continue
             print count
             led = count / 2
-            if led < 18:
+            if led < 29:
                 print "led", led
                 ser.write(str(led) + "\n")
                 cv.WaitKey(2)
 
             center_list.append([center_x, center_y, crop_radius])
 
-            # sample_size = 1
-            #
-            # total_center_x = 0
-            # total_center_y = 0
-            # total_radius = 0
-            #
-            # for past_x, past_y, past_radius in center_list[len(center_list) - sample_size:len(center_list)]:
-            #     total_center_x += past_x
-            #     total_center_y += past_y
-            #     total_radius += past_radius
-            #
-            # average_center_x = float(total_center_x) / sample_size
-            # average_center_y = float(total_center_y) / sample_size
-            # average_radius = float(total_radius) / sample_size
+            sample_size = 20
 
-            # print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
+            total_center_x = 0
+            total_center_y = 0
+            total_radius = 0
+
+            for past_x, past_y, past_radius in center_list[len(center_list) - sample_size:len(center_list)]:
+                total_center_x += past_x
+                total_center_y += past_y
+                total_radius += past_radius
+
+            average_center_x = float(total_center_x) / sample_size
+            average_center_y = float(total_center_y) / sample_size
+            average_radius = float(total_radius) / sample_size
+
+            print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
             print center_x, "   ", center_y, "     ", crop_radius
 
             font = cv2.FONT_HERSHEY_SIMPLEX
-            # cv2.circle(frame, (int(average_center_x), int(average_center_y)), int(average_radius), (0, 255, 0), 1)
-            cv2.circle(frame, (center_x, center_y), crop_radius, (0, 255, 0), 1)
+            cv2.circle(frame, (int(average_center_x), int(average_center_y)), int(average_radius), (0, 255, 0), 1)
+            #cv2.circle(frame, (center_x, center_y), crop_radius, (0, 255, 0), 1)
 
-            crop = frame[center_y - 224:center_y + 224, center_x - 224:center_x + 224]
-            cv2.putText(crop, str(crop_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
-            # crop = frame[average_center_y - 224:average_center_y + 224,
-            #       average_center_x - 224:average_center_x + 224]
-            #cv2.putText(crop, str(average_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
+            # crop = frame[center_y - 224:center_y + 224, center_x - 224:center_x + 224]
+            # cv2.putText(crop, str(crop_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
+            if len(center_list) > 20:
+                crop = frame[average_center_y - 224:average_center_y + 224,
+                       average_center_x - 224:average_center_x + 224]
+                cv2.putText(crop, str(average_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
 
-            cv2.imshow('crop', crop)
-            if count > 4 and count < 40:
-                image_id = count - 5
-                filename = '/home/pkrush/cents-test/' + str(coin_count) + str(image_id).zfill(2) + '.png'
-                cv2.imwrite(filename, crop)
-            if count == 39:
-                ser.write(str(102) + "\n")
-                cv.WaitKey(3500)
-                ser.write(str(100) + "\n")
-                cv.WaitKey(100)
-                ser.write(str(101) + "\n")
-                count = 0
-                found_coin = False
-                coin_count += 1
-            if found_coin == True:
-                count += 1
+                cv2.imshow('crop', crop)
+                if count > 4 and count < 70:
+                    image_id = count - 5
+                    filename = '/home/pkrush/cents-test/' + str(coin_count) + str(image_id).zfill(2) + '.png'
+                    cv2.imwrite(filename, frame)
+                if count == 64:
+                    ser.write(str(102) + "\n")
+                    cv.WaitKey(3500)
+                    ser.write(str(100) + "\n")
+                    cv.WaitKey(100)
+                    ser.write(str(101) + "\n")
+                    count = 0
+                    found_coin = False
+                    coin_count += 1
+                if found_coin == True:
+                    count += 1
 
     # red = frame[:, :, 2]
     # green = frame[:, :, 1]
@@ -159,7 +174,8 @@ while (True):
     print '8 In %s seconds' % (time.time() - start_time,)
 
 ser.write(str(102) + "\n")
-cv.WaitKey(3500)
+# cv.WaitKey(3500)
+cv.WaitKey(35)
 ser.write(str(100) + "\n")
 cv.WaitKey(100)
 ser.write(str(101) + "\n")
