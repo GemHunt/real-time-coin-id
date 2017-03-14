@@ -27,7 +27,7 @@ def deskew(src, pixel_shift):
     return src
 
 
-ser = serial.Serial(port='/dev/ttyUSB1', baudrate=115200)
+ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
 cap = cv2.VideoCapture(0)
 cap.set(3, 1900)
 cap.set(4, 1080)
