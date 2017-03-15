@@ -29,7 +29,7 @@ def deskew(src, pixel_shift):
 
 ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
 cap = cv2.VideoCapture(0)
-cap.set(3, 1900)
+cap.set(3, 1920)
 cap.set(4, 1080)
 
 count = 0
@@ -42,12 +42,12 @@ while (True):
     start_time = time.time()
     ret, frame = cap.read()
     # deskewed = deskew(frame, 5)
-    print '1 In %s seconds' % (time.time() - start_time,)
+    # print '1 In %s seconds' % (time.time() - start_time,)
     if frame == None:
         # print 'None in %s seconds' % (time.time() - start_time,)
         continue
     # cv2.imwrite('/home/pkrush/cents-hd/' + str(coin_count).zfill(5) + str(count).zfill(2) + '.png', frame)
-    print '2 In %s seconds' % (time.time() - start_time,)
+    #print '2 In %s seconds' % (time.time() - start_time,)
     # frame = frame[460:,40:1040]
 
 
@@ -55,33 +55,38 @@ while (True):
     # coin_size_adjustment_factor = 1.06
 
     # top_camera:
-    coin_size_adjustment_factor = .8
+    coin_size_adjustment_factor = .405
 
-
-    frame_width = int(640 * coin_size_adjustment_factor)
-    frame_hieght = int(512 * coin_size_adjustment_factor)
-    print '3 In %s seconds' % (time.time() - start_time,)
+    frame_width = int(1920 * coin_size_adjustment_factor)
+    frame_hieght = int(1080 * coin_size_adjustment_factor)
+    #print '3 In %s seconds' % (time.time() - start_time,)
     frame = cv2.resize(frame, (frame_width, frame_hieght), interpolation=cv2.INTER_AREA)
-    print '4 In %s seconds' % (time.time() - start_time,)
+    # print '4 In %s seconds' % (time.time() - start_time,)
+
+
+    blank_image = np.zeros((frame_hieght + 100, frame_width, 3), np.uint8)
+
+    blank_image[50:frame_hieght + 50, 0:frame_width] = frame
+    frame = blank_image
 
     cv2.imshow('frame', frame)
     # frame = deskew(frame,-9)  #100 rpm
     # frame = deskew(frame, -30)
-    print '5 In %s seconds' % (time.time() - start_time,)
+    #print '5 In %s seconds' % (time.time() - start_time,)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=50, param2=30, minRadius=448, maxRadius=450)
 
     # good for scanning:
     # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=222, maxRadius=226)
-    print '6 In %s seconds' % (time.time() - start_time,)
+    #print '6 In %s seconds' % (time.time() - start_time,)
 
     #Bottom Camera
-    circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=215, maxRadius=224)
+    circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=222, maxRadius=224)
 
     # Top Camera:
     #circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=290, maxRadius=295)
 
-    print '7 In %s seconds' % (time.time() - start_time,)
+    #print '7 In %s seconds' % (time.time() - start_time,)
 
     if circles is None:
         continue
@@ -99,10 +104,11 @@ while (True):
         # print circles
         cv2.imshow('detected circles', frame)
 
-        center_stop = 250
-        center_stop = 10
+        # The coin is move from right to left so the center_x is going down.
+        center_stop_x = 530
+        center_go_x = 350
         print center_x, "   ", center_y, "     ", crop_radius
-        if center_x > center_stop:
+        if center_go_x < center_x < center_stop_x:
             print center_x
             if found_coin == False:
                 found_coin = True
@@ -149,19 +155,21 @@ while (True):
                 cv2.putText(crop, str(average_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
 
                 cv2.imshow('crop', crop)
-                if count > 4 and count < 70:
+                if count > 4 and count < 62:
                     image_id = count - 5
                     filename = '/home/pkrush/cents-test/' + str(coin_count) + str(image_id).zfill(2) + '.png'
                     cv2.imwrite(filename, frame)
-                if count == 64:
+                if count == 62:
                     ser.write(str(102) + "\n")
-                    cv.WaitKey(3500)
-                    ser.write(str(100) + "\n")
-                    cv.WaitKey(100)
-                    ser.write(str(101) + "\n")
+                    cv.WaitKey(2)
+                if count == 80:
+                    # ser.write(str(100) + "\n")
+                    # cv.WaitKey(100)
+                    #ser.write(str(101) + "\n")
                     count = 0
                     found_coin = False
                     coin_count += 1
+
                 if found_coin == True:
                     count += 1
 
