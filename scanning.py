@@ -49,7 +49,7 @@ def scan(top_camera, bottom_camera, ser):
 
         led = count / 2
         if led < 29:
-            print "led", led
+            # print "led", led
             ser.write(str(led) + "\n")
             cv.WaitKey(2)
 
@@ -195,7 +195,7 @@ def get_moving_center_x(frame, ratio, deskew_pixels, frame_name):
     # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=222, maxRadius=226)
     # print '6 In %s seconds' % (time.time() - start_time,)
     # Bottom Camera
-    circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=30, param2=20, minRadius=52, maxRadius=58)
+    circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=52, maxRadius=58)
     if circles is None:
         cv2.imshow(frame_name, frame)
         return 0
@@ -214,7 +214,9 @@ def get_moving_center_x(frame, ratio, deskew_pixels, frame_name):
 
 ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
 ser.write(str(102) + "\n")
+cv.WaitKey(2)
 ser.write(str(104) + "\n")
+cv.WaitKey(2)
 cameras = []
 top_camera = None
 bottom_camera = None
@@ -224,19 +226,25 @@ for camera_id in range(0, 3):
     cap.set(3, 1920)
     cap.set(4, 1080)
 
+    # if cap.get(3) == 1920:
+    #     if top_camera is None:
+    #         top_camera = cap
+    #     else:
+    #         bottom_camera = cap
+
     if cap.get(3) == 1920:
-        if top_camera is None:
-            top_camera = cap
-        else:
+        if bottom_camera is None:
             bottom_camera = cap
+        else:
+            top_camera = cap
 
 coin_count = 0
 center_list = []
 found_coin = False
 
 top_status = 1
-bottom_status = 0
-first_top_scanned = False
+bottom_status = 1
+#first_top_scanned = False
 
 # 0 is ready to scan
 # 1 is move to center
@@ -248,7 +256,6 @@ while (True):
     start_time = time.time()
     ret, top = top_camera.read()
     ret, bottom = bottom_camera.read()
-    # print '1 In %s seconds' % (time.time() - start_time,)
     if top == None:
         raise ValueError('A frame from the top camera came up None')
 
@@ -260,12 +267,14 @@ while (True):
         print 'top', center_x,
         if center_x != 0:
             if top_status == 1 and center_x < 1000:
-                if first_top_scanned == True:
-                    top_status = 0
-                    ser.write(str(105) + "\n")
-                else:
-                    first_top_scanned = True
-                    top_status = 2
+                # if first_top_scanned == True:
+                top_status = 0
+                ser.write(str(105) + "\n")
+                cv.WaitKey(2)
+                print 'Top belt off',
+                # else:
+                # first_top_scanned = True
+                #top_status = 2
             if top_status == 2 and center_x > 1200:
                 top_status = 1
 
@@ -276,17 +285,30 @@ while (True):
             if bottom_status == 1 and center_x > 900:
                 bottom_status = 0
                 ser.write(str(103) + "\n")
-            if bottom_status == 2 and center_x < 400:
+                print 'Bottom belt off',
+            if bottom_status == 2 and center_x < 600:
                 bottom_status = 1
 
     if top_status == 0 and bottom_status == 0:
-        if first_top_scanned == True:
-            scan(top_camera, bottom_camera, ser)
-            print 'Scanning with the LED lights.',
+        # if first_top_scanned == True:
+        scan(top_camera, bottom_camera, ser)
+        print 'Cycle In %s seconds' % (time.time() - start_time,)
+        start_time = time.time()
+        print 'Scanning with the LED lights.',
+        cv.WaitKey(10)
         ser.write(str(102) + "\n")
+        cv.WaitKey(2)
         ser.write(str(104) + "\n")
+        cv.WaitKey(2)
+        print 'Both belts on',
         top_status = 2
         bottom_status = 2
+
+    if top_status == 2 and bottom_status == 2:
+        ser.write(str(102) + "\n")
+        cv.WaitKey(2)
+        ser.write(str(104) + "\n")
+        cv.WaitKey(2)
 
     print top_status, bottom_status
 
