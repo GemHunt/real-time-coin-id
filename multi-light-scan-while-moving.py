@@ -42,7 +42,7 @@ while (True):
     if frame == None:
         # print 'None in %s seconds' % (time.time() - start_time,)
         continue
-    # cv2.imwrite('/home/pkrush/cents-hd/' + str(coin_count).zfill(5) + str(count).zfill(2) + '.png', frame)
+    # cv2.imwrite('/home/pkrush/cents-hd/' + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', frame)
     frame = cv2.resize(frame, (960, 540), interpolation=cv2.INTER_AREA)
     cv2.imshow('frame', frame)
     frame = deskew(frame, -9)

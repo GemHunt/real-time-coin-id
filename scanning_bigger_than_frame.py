@@ -46,7 +46,7 @@ while (True):
     if frame == None:
         # print 'None in %s seconds' % (time.time() - start_time,)
         continue
-    # cv2.imwrite('/home/pkrush/cents-hd/' + str(coin_count).zfill(5) + str(count).zfill(2) + '.png', frame)
+    # cv2.imwrite('/home/pkrush/cents-hd/' + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', frame)
     print '2 In %s seconds' % (time.time() - start_time,)
     # frame = frame[460:,40:1040]
 

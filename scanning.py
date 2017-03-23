@@ -1,6 +1,4 @@
-import glob
 import numpy as np
-import os
 import serial
 import time
 
@@ -44,108 +42,88 @@ def deskew(src, pixel_shift):
     return src
 
 
-def scan(top_camera, bottom_camera, ser, coin_id):
+def scan(top_camera, bottom_camera, ser):
     top_captures = []
     bottom_captures = []
 
     for count in range(0, 62):
-        # print count,
         top, bottom = read_from_cameras(top_camera, bottom_camera)
 
         if count > 4:
-            cv2.imwrite('/home/pkrush/cents-test/' + str(coin_id).zfill(5) + str(count - 5).zfill(2) + '.png', top)
-            cv2.imwrite('/home/pkrush/cents-test/' + str(coin_id + 1).zfill(5) + str(count - 5).zfill(2) + '.png',
-                        bottom)
-            # top_captures.append(top)
-            # bottom_captures.append(bottom)
-
+            top_captures.append(top)
+            bottom_captures.append(bottom)
         led = count / 2
         if led < 29:
-            # print "led", led
             ser.write(str(led) + "\n")
             cv.WaitKey(1)
-            #return top_captures, bottom_captures
+    return top_captures, bottom_captures
 
 
 def save(captures, coin_id):
     count = 0
     center_list = []
-
+    resized = []
 
     for frame in captures:
-        cv2.imwrite('/home/pkrush/cents-test/' + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', frame)
+        if coin_id % 2 == 0:
+            ratio = .41
+        else:
+            ratio = .46
+
+        frame_width = int(1920 * ratio)
+        frame_height = int(1080 * ratio)
+        # print '3 In %s seconds' % (time.time() - start_time,)
+        frame = cv2.resize(frame, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
+        height_expansion_amount = 40
+        blank_image = np.zeros((frame_height + height_expansion_amount, frame_width, 3), np.uint8)
+        blank_image[height_expansion_amount / 2:frame_height + height_expansion_amount / 2, 0:frame_width] = frame
+        frame = blank_image
+        resized.append(frame)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        if coin_id % 2 == 0:
+            circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 2000, param1=45, param2=25, minRadius=222,
+                                       maxRadius=226)
+        else:
+            circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 2000, param1=45, param2=25, minRadius=222,
+                                       maxRadius=226)
+        if circles is None:
+            continue
+        circles = np.uint16(np.around(circles))
+
+        for i in circles[0, :]:
+            center_x = i[0]
+            center_y = i[1]
+            crop_radius = i[2]
+            cv2.circle(gray, (center_x, center_y), 2, (0, 0, 255), 1)
+            cv2.circle(gray, (center_x, center_y), crop_radius, (0, 0, 255), 1)
+            center_list.append([center_x, center_y, crop_radius])
+
+    total_center_x = 0
+    total_center_y = 0
+    total_radius = 0
+
+    for center_x, center_y, crop_radius in center_list:
+        print center_x, center_y, crop_radius
+        total_center_x += center_x
+        total_center_y += center_y
+        total_radius += crop_radius
+
+    if len(center_list) == 0:
+        raise ValueError(str(coin_id) + 'had no detected circles')
+
+    average_center_x = float(total_center_x) / len(center_list)
+    average_center_y = float(total_center_y) / len(center_list)
+    average_radius = float(total_radius) / len(center_list)
+
+    print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
+
+    for frame in resized:
+        crop = frame[average_center_y - 224:average_center_y + 224, average_center_x - 224:average_center_x + 224]
+        cv2.imwrite('/home/pkrush/cents-test/' + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', crop)
+        count += 1
+
     return
-    #
-    #     # ratio = 1
-    #     # frame_width = int(1920 * ratio)
-    #     # frame_height = int(1080 * ratio)
-    #     # frame = cv2.resize(frame, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
-    #
-    #     if coin_id % 2 == 0:
-    #         ratio = .405
-    #     else:
-    #         ratio = .46
-    #
-    #     frame_width = int(1920 * ratio)
-    #     frame_height = int(1080 * ratio)
-    #     # print '3 In %s seconds' % (time.time() - start_time,)
-    #     frame = cv2.resize(frame, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
-    #
-    #     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    #     if coin_id % 2 == 0:
-    #         # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=50, param2=30, minRadius=448, maxRadius=450)
-    #         circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 2000, param1=45, param2=25, minRadius=222,
-    #                                    maxRadius=226)
-    #     else:
-    #         circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 2000, param1=45, param2=25, minRadius=222,
-    #                                    maxRadius=226)
-    #     if circles is None:
-    #         continue
-    #     circles = np.uint16(np.around(circles))
-    #
-    #     for i in circles[0, :]:
-    #         center_x = i[0]
-    #         center_y = i[1]
-    #         crop_radius = i[2]
-    #         cv2.circle(gray, (center_x, center_y), 2, (0, 0, 255), 1)
-    #         cv2.circle(gray, (center_x, center_y), crop_radius, (0, 0, 255), 1)
-    #         # print circles
-    #         #cv2.imshow('detected circles', gray)
-    #         #cv2.waitKey(20)
-    #         center_list.append([center_x, center_y, crop_radius])
-    #         #cv2.imwrite('/home/pkrush/cents-test/' + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', gray)
-    #
-    #     count += 1
-    #
-    # total_center_x = 0
-    # total_center_y = 0
-    # total_radius = 0
-    #
-    # for center_x, center_y, crop_radius in center_list:
-    #     print center_x, center_y, crop_radius
-    #     total_center_x += center_x
-    #     total_center_y += center_y
-    #     total_radius += crop_radius
-    #
-    # if len(center_list) == 0:
-    #     raise ValueError(str(coin_id) + 'had no detected circles')
-    #
-    #
-    # average_center_x = float(total_center_x) / len(center_list)
-    # average_center_y = float(total_center_y) / len(center_list)
-    # average_radius = float(total_radius) / len(center_list)
-    #
-    # print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
-    #
-    # font = cv2.FONT_HERSHEY_SIMPLEX
-    # cv2.circle(gray, (int(average_center_x), int(average_center_y)), int(average_radius), (0, 255, 0), 1)
-    # cv2.circle(gray, (int(average_center_x), int(average_center_y)), 2, (255, 0, 0), 1)
-    # #cv2.imshow("ave", gray)
-    # #cv2.waitKey(0)
-    #
-    # # crop = frame[center_y - 224:center_y + 224, center_x - 224:center_x + 224]
-    # # cv2.putText(crop, str(crop_radius)[0:5], (10, 90), font, .7, (0, 255, 0), 2)
-    # return
 
 
 def get_moving_center_x(frame, ratio, deskew_pixels, frame_name, frame_id):
@@ -163,11 +141,6 @@ def get_moving_center_x(frame, ratio, deskew_pixels, frame_name, frame_id):
     deskewed = deskew(frame, deskew_pixels)
     gray = cv2.cvtColor(deskewed, cv2.COLOR_BGR2GRAY)
 
-    # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=50, param2=30, minRadius=448, maxRadius=450)
-    # good for scanning:
-    # circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=40, param2=20, minRadius=222, maxRadius=226)
-    # print '6 In %s seconds' % (time.time() - start_time,)
-    # Bottom Camera
     circles = cv2.HoughCircles(gray, cv.CV_HOUGH_GRADIENT, 1, 300, param1=45, param2=25, minRadius=52, maxRadius=58)
     if circles is None:
         cv2.imshow(frame_name, frame)
@@ -208,25 +181,25 @@ def get_cameras():
         bottom_camera = temp_camera
     return top_camera, bottom_camera
 
-
-
 top_camera, bottom_camera = get_cameras()
 
-files = glob.glob('/home/pkrush/cents-circle-detect/*')
-for f in files:
-    os.remove(f)
-files = glob.glob('/home/pkrush/cents-test/*')
-for f in files:
-    os.remove(f)
+# files = glob.glob('/home/pkrush/cents-circle-detect/*')
+# for f in files:
+#     os.remove(f)
+# files = glob.glob('/home/pkrush/cents-test/*')
+# for f in files:
+#     os.remove(f)
 
-ser = serial.Serial(port='/dev/ttyUSB1', baudrate=115200)
+coin_id = 380
+coin_is_starts = [0, 380]
+# So this means 1, 378,381 are junk
+ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
 ser.write(str(102) + "\n")
 cv.WaitKey(2)
 ser.write(str(104) + "\n")
 cv.WaitKey(2)
 frame_count = 0
 last_scan_frame_count = -100
-coin_count = 0
 found_coin = False
 
 top_belt_on = True
@@ -252,7 +225,7 @@ while (True):
         center_x = get_moving_center_x(top, .1, 8, 'Top', frame_count)
         if center_x != 0:
             status += 'top' + ' ' + str(center_x) + '-'
-            if top_belt_on and center_x < 1920:
+            if top_belt_on and center_x < 1782:
                 top_belt_on = False
                 status += str(top_belt_on) + ' ' + str(bottom_belt_on) + '-'
                 ser.write(str(105) + "\n")
@@ -272,25 +245,16 @@ while (True):
 
     if top_belt_on == False and bottom_belt_on == False:
         # if first_top_scanned == True:
-        status += 'Scanning ' + str(coin_count) + ' with the LED lights-'
+        status += 'Scanning ' + str(coin_id) + ' with the LED lights-'
         last_scan_frame_count = frame_count
-        #cv.WaitKey(60)
-        # ser.write(str(101) + "\n")
-        # cv.WaitKey(10)
-        # ser.write(str(102) + "\n")
-        # cv.WaitKey(1)
-        # ser.write(str(104) + "\n")
-        # cv.WaitKey(1)
-        scan(top_camera, bottom_camera, ser, coin_count)
-        #top_captures, bottom_captures = scan(top_camera, bottom_camera, ser)
-
-        # t = threading.Thread(target=save, args=(top_captures, coin_count))
+        top_captures, bottom_captures = scan(top_camera, bottom_camera, ser)
+        # t = threading.Thread(target=save, args=(top_captures, coin_id))
         # t.start()
-        # t = threading.Thread(target=save, args=(bottom_captures, coin_count + 1))
+        # t = threading.Thread(target=save, args=(bottom_captures, coin_id + 1))
         # t.start()
-        # save(top_captures, coin_count)
-        #save(bottom_captures, coin_count + 1)
-        coin_count += 2
+        save(top_captures, coin_id)
+        save(bottom_captures, coin_id + 1)
+        coin_id += 2
         #status += 'Cycle In %s seconds' % (time.time() - start_time,)
         start_time = time.time()
         status += 'Both belts on-'
