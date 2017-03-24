@@ -123,7 +123,9 @@ def save(captures, coin_id):
 
     for frame in resized:
         crop = frame[average_center_y - 224:average_center_y + 224, average_center_x - 224:average_center_x + 224]
-        cv2.imwrite('/home/pkrush/cents-test/' + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', crop)
+        cv2.imwrite(
+            '/media/pkrush/Seagate Backup Plus Drive/cents_2_camera/' + str(coin_id).zfill(5) + str(count).zfill(
+                2) + '.png', crop)
         count += 1
 
     return
@@ -193,10 +195,10 @@ files = glob.glob('/home/pkrush/cents-test/*')
 for f in files:
     os.remove(f)
 
-coin_id = 380
-coin_is_starts = [0, 380]
-# So this means 1, 378,381 are junk
-ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
+coin_id = 2674
+coin_is_starts = [0, 380, 1152, 1972, 2674]
+# So this means 1, 378,381 are junk (or coin_id 378 is junk, since -2 does not exist)
+ser = serial.Serial(port='/dev/ttyUSB1', baudrate=115200)
 ser.write(str(102) + "\n")
 cv.WaitKey(2)
 ser.write(str(104) + "\n")
@@ -219,7 +221,7 @@ while (True):
     start_time = time.time()
 
     top, bottom = read_from_cameras(top_camera, bottom_camera)
-    after_scan_frame_delay = 20
+    after_scan_frame_delay = 23
     if frame_count - last_scan_frame_count < after_scan_frame_delay:
         frame_count += 1
         continue
