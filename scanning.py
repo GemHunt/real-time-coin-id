@@ -1,4 +1,6 @@
+import glob
 import numpy as np
+import os
 import serial
 import time
 
@@ -74,9 +76,10 @@ def save(captures, coin_id):
         frame_height = int(1080 * ratio)
         # print '3 In %s seconds' % (time.time() - start_time,)
         frame = cv2.resize(frame, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
-        height_expansion_amount = 40
-        blank_image = np.zeros((frame_height + height_expansion_amount, frame_width, 3), np.uint8)
-        blank_image[height_expansion_amount / 2:frame_height + height_expansion_amount / 2, 0:frame_width] = frame
+        border_expansion = 30
+        blank_image = np.zeros((frame_height + border_expansion * 2, frame_width + border_expansion * 2, 3), np.uint8)
+        blank_image[border_expansion:frame_height + border_expansion,
+        border_expansion:frame_width + border_expansion] = frame
         frame = blank_image
         resized.append(frame)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -104,7 +107,7 @@ def save(captures, coin_id):
     total_radius = 0
 
     for center_x, center_y, crop_radius in center_list:
-        print center_x, center_y, crop_radius
+        # print center_x, center_y, crop_radius
         total_center_x += center_x
         total_center_y += center_y
         total_radius += crop_radius
@@ -163,7 +166,7 @@ def get_cameras():
     top_camera = None
     bottom_camera = None
 
-    for camera_id in range(0, 3):
+    for camera_id in range(0, 4):
         cap = cv2.VideoCapture(camera_id)
         cap.set(3, 1920)
         cap.set(4, 1080)
@@ -175,7 +178,7 @@ def get_cameras():
                 bottom_camera = cap
 
     top, bottom = read_from_cameras(top_camera, bottom_camera)
-    if bottom[0, 0, 0] == bottom[0, 0, 1] == bottom[0, 0, 2]:
+    if bottom[170, 170, 0] == bottom[170, 170, 1] == bottom[170, 170, 2]:
         temp_camera = top_camera
         top_camera = bottom_camera
         bottom_camera = temp_camera
@@ -186,9 +189,9 @@ top_camera, bottom_camera = get_cameras()
 # files = glob.glob('/home/pkrush/cents-circle-detect/*')
 # for f in files:
 #     os.remove(f)
-# files = glob.glob('/home/pkrush/cents-test/*')
-# for f in files:
-#     os.remove(f)
+files = glob.glob('/home/pkrush/cents-test/*')
+for f in files:
+    os.remove(f)
 
 coin_id = 380
 coin_is_starts = [0, 380]
