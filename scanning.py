@@ -1,4 +1,3 @@
-import glob
 import numpy as np
 import os
 import serial
@@ -66,6 +65,8 @@ def save(captures, coin_id):
     center_list = []
     resized = []
 
+    start_time = time.time()
+
     for frame in captures:
         if coin_id % 2 == 0:
             ratio = .41
@@ -74,7 +75,6 @@ def save(captures, coin_id):
 
         frame_width = int(1920 * ratio)
         frame_height = int(1080 * ratio)
-        # print '3 In %s seconds' % (time.time() - start_time,)
         frame = cv2.resize(frame, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
         border_expansion = 30
         blank_image = np.zeros((frame_height + border_expansion * 2, frame_width + border_expansion * 2, 3), np.uint8)
@@ -106,30 +106,41 @@ def save(captures, coin_id):
     total_center_y = 0
     total_radius = 0
 
+    # print '1 In %s seconds' % (time.time() - start_time,)
+
     for center_x, center_y, crop_radius in center_list:
         # print center_x, center_y, crop_radius
         total_center_x += center_x
         total_center_y += center_y
         total_radius += crop_radius
+    #print '2 In %s seconds' % (time.time() - start_time,)
 
     if len(center_list) == 0:
-        raise ValueError(str(coin_id) + 'had no detected circles')
+        return False
+        # raise ValueError(str(coin_id) + 'had no detected circles')
+    #print '3 In %s seconds' % (time.time() - start_time,)
 
     average_center_x = float(total_center_x) / len(center_list)
     average_center_y = float(total_center_y) / len(center_list)
     average_radius = float(total_radius) / len(center_list)
 
-    print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
+    # print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
+    # print '4 In %s seconds' % (time.time() - start_time,)
+
+    # dir = '/media/pkrush/Seagate Backup Plus Drive/cents_2/' + str(coin_id/100) + '/'
+    dir = '/home/pkrush/cents-test/' + str(coin_id / 100) + '/'
+
+    if not os.path.exists(dir):
+        os.mkdir(dir)
+    #print '5 In %s seconds' % (time.time() - start_time,)
 
     for frame in resized:
         crop = frame[average_center_y - 224:average_center_y + 224, average_center_x - 224:average_center_x + 224]
-        cv2.imwrite(
-            '/media/pkrush/Seagate Backup Plus Drive/cents_2_camera/' + str(coin_id).zfill(5) + str(count).zfill(
-                2) + '.png', crop)
+        cv2.imwrite(dir + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', crop)
         count += 1
+    #print '6 In %s seconds' % (time.time() - start_time,)
 
-    return
-
+    return True
 
 def get_moving_center_x(frame, ratio, deskew_pixels, frame_name, frame_id):
     frame_width = int(1920 * ratio)
@@ -191,14 +202,15 @@ top_camera, bottom_camera = get_cameras()
 # files = glob.glob('/home/pkrush/cents-circle-detect/*')
 # for f in files:
 #     os.remove(f)
-files = glob.glob('/home/pkrush/cents-test/*')
-for f in files:
-    os.remove(f)
+# files = glob.glob('/home/pkrush/cents-test/*')
+# for f in files:
+#    os.remove(f)
 
-coin_id = 2674
-coin_is_starts = [0, 380, 1152, 1972, 2674]
+start_time = time.time()
+coin_id = 3330
+coin_is_starts = [0, 380, 1152, 1972, 2674, 2780, 2846, 2946,3330]
 # So this means 1, 378,381 are junk (or coin_id 378 is junk, since -2 does not exist)
-ser = serial.Serial(port='/dev/ttyUSB1', baudrate=115200)
+ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
 ser.write(str(102) + "\n")
 cv.WaitKey(2)
 ser.write(str(104) + "\n")
@@ -218,10 +230,9 @@ while (True):
         cv.WaitKey(1)
         ser.write(str(104) + "\n")
         cv.WaitKey(1)
-    start_time = time.time()
 
     top, bottom = read_from_cameras(top_camera, bottom_camera)
-    after_scan_frame_delay = 23
+    after_scan_frame_delay = 42
     if frame_count - last_scan_frame_count < after_scan_frame_delay:
         frame_count += 1
         continue
@@ -257,10 +268,15 @@ while (True):
         # t.start()
         # t = threading.Thread(target=save, args=(bottom_captures, coin_id + 1))
         # t.start()
-        save(top_captures, coin_id)
-        save(bottom_captures, coin_id + 1)
-        coin_id += 2
-        #status += 'Cycle In %s seconds' % (time.time() - start_time,)
+        # print 'pre save In %s seconds' % (time.time() - start_time,)
+        top_save = save(top_captures, coin_id)
+        bottom_save = save(bottom_captures, coin_id + 1)
+        # print 'save In %s seconds' % (time.time() - start_time,)
+
+        if top_save and bottom_save:
+            coin_id += 2
+
+        status += 'Cycle In %s seconds' % (time.time() - start_time,)
         start_time = time.time()
         status += 'Both belts on-'
         top_belt_on = True
