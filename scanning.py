@@ -262,6 +262,7 @@ while (True):
     if top_belt_on == False and bottom_belt_on == False:
         # if first_top_scanned == True:
         status += 'Scanning ' + str(coin_id) + ' with the LED lights-'
+
         last_scan_frame_count = frame_count
         top_captures, bottom_captures = scan(top_camera, bottom_camera, ser)
         # t = threading.Thread(target=save, args=(top_captures, coin_id))
