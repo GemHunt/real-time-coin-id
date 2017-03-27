@@ -232,7 +232,7 @@ while (True):
         cv.WaitKey(1)
 
     top, bottom = read_from_cameras(top_camera, bottom_camera)
-    after_scan_frame_delay = 42
+    after_scan_frame_delay = 30
     if frame_count - last_scan_frame_count < after_scan_frame_delay:
         frame_count += 1
         continue
@@ -246,7 +246,11 @@ while (True):
                 status += str(top_belt_on) + ' ' + str(bottom_belt_on) + '-'
                 ser.write(str(105) + "\n")
                 cv.WaitKey(1)
-                status += 'Top belt off'
+                ser.write(str(106) + "\n")
+                cv.WaitKey(10)
+                ser.write(str(107) + "\n")
+                cv.WaitKey(1)
+                status += 'Top belt off, reset hopper'
 
     if bottom_belt_on:
         center_x = get_moving_center_x(bottom, .11, -8, 'Bot', frame_count)
