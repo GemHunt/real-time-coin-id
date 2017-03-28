@@ -207,8 +207,8 @@ top_camera, bottom_camera = get_cameras()
 #    os.remove(f)
 
 start_time = time.time()
-coin_id = 3330
-coin_is_starts = [0, 380, 1152, 1972, 2674, 2780, 2846, 2946,3330]
+coin_id = 5448
+coin_is_starts = [0, 380, 1152, 1972, 2674, 2780, 2846, 2946, 3330, 5458]
 # So this means 1, 378,381 are junk (or coin_id 378 is junk, since -2 does not exist)
 ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
 ser.write(str(102) + "\n")
