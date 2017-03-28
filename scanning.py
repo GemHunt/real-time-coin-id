@@ -2,14 +2,16 @@ import numpy as np
 import os
 import serial
 import time
-
+import sys
 import cv2
 import cv2.cv as cv
+import cPickle as pickle
 
 
-def get_work_data():
-    return 'data'
-
+def get_filename(coin_id, image_id):
+    dir = '/home/pkrush/cents-test/' + str(coin_id / 100) + '/'
+    filename = dir + str(coin_id).zfill(5) + str(image_id).zfill(2) + '.png'
+    return filename
 
 def read_from_cameras(top_camera, bottom_camera):
     ret, top = top_camera.read()
@@ -59,12 +61,12 @@ def scan(top_camera, bottom_camera, ser):
             cv.WaitKey(1)
     return top_captures, bottom_captures
 
-
 def save(captures, coin_id):
     count = 0
+    crop_radius = 224
+    border_expansion = 30
     center_list = []
     resized = []
-
     start_time = time.time()
 
     for frame in captures:
@@ -76,7 +78,6 @@ def save(captures, coin_id):
         frame_width = int(1920 * ratio)
         frame_height = int(1080 * ratio)
         frame = cv2.resize(frame, (frame_width, frame_height), interpolation=cv2.INTER_AREA)
-        border_expansion = 30
         blank_image = np.zeros((frame_height + border_expansion * 2, frame_width + border_expansion * 2, 3), np.uint8)
         blank_image[border_expansion:frame_height + border_expansion,
         border_expansion:frame_width + border_expansion] = frame
@@ -97,10 +98,10 @@ def save(captures, coin_id):
         for i in circles[0, :]:
             center_x = i[0]
             center_y = i[1]
-            crop_radius = i[2]
+            coin_radius = i[2]
             cv2.circle(gray, (center_x, center_y), 2, (0, 0, 255), 1)
-            cv2.circle(gray, (center_x, center_y), crop_radius, (0, 0, 255), 1)
-            center_list.append([center_x, center_y, crop_radius])
+            cv2.circle(gray, (center_x, center_y), coin_radius, (0, 0, 255), 1)
+            center_list.append([center_x, center_y, coin_radius])
 
     total_center_x = 0
     total_center_y = 0
@@ -108,11 +109,11 @@ def save(captures, coin_id):
 
     # print '1 In %s seconds' % (time.time() - start_time,)
 
-    for center_x, center_y, crop_radius in center_list:
-        # print center_x, center_y, crop_radius
+    for center_x, center_y, coin_radius in center_list:
+        # print center_x, center_y, coin_radius
         total_center_x += center_x
         total_center_y += center_y
-        total_radius += crop_radius
+        total_radius += coin_radius
     #print '2 In %s seconds' % (time.time() - start_time,)
 
     if len(center_list) == 0:
@@ -124,8 +125,28 @@ def save(captures, coin_id):
     average_center_y = float(total_center_y) / len(center_list)
     average_radius = float(total_radius) / len(center_list)
 
-    # print average_center_x, center_x, "   ", average_center_y, center_y, "     ", average_radius, crop_radius
-    # print '4 In %s seconds' % (time.time() - start_time,)
+    resized_height,resized_width,channels = frame.shape
+    crop_top = average_center_y - crop_radius
+    crop_bottom = average_center_y + crop_radius
+    crop_left = average_center_x - crop_radius
+    crop_right = average_center_x + crop_radius
+    bad_crop =  ' is Bad. X&Y:' + str(average_center_x) + "," + str(average_center_y) + ' Frame Width:' + str(resized_width) + ' Frame Height:' + str(resized_height)
+
+    if crop_left < 0:
+        print str(crop_left) + ' crop_left' + bad_crop + '\n\n\n'
+        #return False
+
+    if crop_right > resized_width:
+        print str(crop_right) + ' crop_right' +  bad_crop + '\n\n\n'
+        #return False
+
+    if crop_top < 0:
+        print str(crop_top) + ' crop_top' + bad_crop + '\n\n\n'
+        #return False
+
+    if crop_bottom > resized_height:
+        print str(crop_bottom) + ' crop_bottom' + bad_crop + '\n\n\n'
+        #return False
 
     # dir = '/media/pkrush/Seagate Backup Plus Drive/cents_2/' + str(coin_id/100) + '/'
     dir = '/home/pkrush/cents-test/' + str(coin_id / 100) + '/'
@@ -135,7 +156,7 @@ def save(captures, coin_id):
     #print '5 In %s seconds' % (time.time() - start_time,)
 
     for frame in resized:
-        crop = frame[average_center_y - 224:average_center_y + 224, average_center_x - 224:average_center_x + 224]
+        crop = frame[crop_top:crop_bottom, crop_left:crop_right]
         cv2.imwrite(dir + str(coin_id).zfill(5) + str(count).zfill(2) + '.png', crop)
         count += 1
     #print '6 In %s seconds' % (time.time() - start_time,)
@@ -197,6 +218,68 @@ def get_cameras():
         bottom_camera = temp_camera
     return top_camera, bottom_camera
 
+#this is a one time function as the init scanning had issues.
+#237 sets of 2 were bad 2500 were good. I have 5000 good sets of 57 images for 2500 coins.
+def save_good_coin_ids():
+    good_coin_ids = set()
+    bad_coin_ids = set()
+    #for coin_id in range(0, 5458, 2):
+    for coin_id in range(0, 5458, 2):
+        good_coin_ids.add(coin_id)
+        for side in [0, 3]:
+            for image_id in range(0, 56):
+                filename = get_filename(coin_id + side, image_id)
+                if not os.path.isfile(filename):
+                    bad_coin_ids.add(coin_id)
+                    continue
+                if os.path.getsize(filename) == 0:
+                    bad_coin_ids.add(coin_id)
+                    continue
+            test_image = cv2.imread(filename)
+            if test_image is None:
+                bad_coin_ids.add(coin_id)
+                continue
+
+            width, height, channels = test_image.shape
+            if not width == height == 448:
+                bad_coin_ids.add(coin_id)
+                continue
+
+    good_coin_ids = good_coin_ids - bad_coin_ids
+    for start_id in coin_id_starts:
+        if start_id != 0:
+            #-2 is bad: Why;
+            #-2 bad the for top coin_id is good,
+            #-1 good the bottom of -4 good,
+            #0 good top coin_id is good,
+            #1 bad bottom will never be read as it's the back of -2
+            #2 good top is new the back of 0
+            #3 good bottom is the back of #0
+            bad_coin_ids.add(start_id - 2)
+
+    print len(bad_coin_ids)
+    print len(good_coin_ids)
+    good_coin_ids.difference(bad_coin_ids)
+    home_dir = '/home/pkrush/cent-models/'
+    data_dir = home_dir + 'metadata/'
+    back_sides = set()
+    for coin_id in good_coin_ids:
+        back_sides.add(coin_id + 3)
+    good_coin_ids = good_coin_ids.union(back_sides)
+    print len(good_coin_ids)
+    pickle.dump(good_coin_ids, open(data_dir + 'seed_image_ids.pickle', "wb"))
+    pickle.dump(good_coin_ids, open(data_dir + 'test_image_ids.pickle', "wb"))
+
+
+coin_id_starts = [0, 380, 1152, 1972, 2674, 2780, 2846, 2946, 3330, 5448]
+def get_start_coin_id():
+    return coin_id_starts[len(coin_id_starts) - 1]
+
+
+save_good_coin_ids()
+sys.exit()
+
+coin_id = get_start_coin_id()
 top_camera, bottom_camera = get_cameras()
 
 # files = glob.glob('/home/pkrush/cents-circle-detect/*')
@@ -207,9 +290,7 @@ top_camera, bottom_camera = get_cameras()
 #    os.remove(f)
 
 start_time = time.time()
-coin_id = 5448
-coin_is_starts = [0, 380, 1152, 1972, 2674, 2780, 2846, 2946, 3330, 5458]
-# So this means 1, 378,381 are junk (or coin_id 378 is junk, since -2 does not exist)
+
 ser = serial.Serial(port='/dev/ttyUSB0', baudrate=115200)
 ser.write(str(102) + "\n")
 cv.WaitKey(2)
@@ -241,7 +322,7 @@ while (True):
         center_x = get_moving_center_x(top, .1, 8, 'Top', frame_count)
         if center_x != 0:
             status += 'top' + ' ' + str(center_x) + '-'
-            if top_belt_on and center_x < 1782:
+            if top_belt_on and center_x < 1691:
                 top_belt_on = False
                 status += str(top_belt_on) + ' ' + str(bottom_belt_on) + '-'
                 ser.write(str(105) + "\n")
@@ -287,7 +368,6 @@ while (True):
         top_belt_on = True
         bottom_belt_on = True
         status += str(top_belt_on) + ' ' + str(bottom_belt_on) + '-'
-
     if status != '':
         print frame_count, status
     frame_count +=1
