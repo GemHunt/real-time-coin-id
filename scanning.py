@@ -223,7 +223,6 @@ def get_cameras():
 def save_good_coin_ids():
     good_coin_ids = set()
     bad_coin_ids = set()
-    #for coin_id in range(0, 5458, 2):
     for coin_id in range(0, 5458, 2):
         good_coin_ids.add(coin_id)
         for side in [0, 3]:
@@ -274,7 +273,6 @@ def save_good_coin_ids():
 coin_id_starts = [0, 380, 1152, 1972, 2674, 2780, 2846, 2946, 3330, 5448]
 def get_start_coin_id():
     return coin_id_starts[len(coin_id_starts) - 1]
-
 
 save_good_coin_ids()
 sys.exit()
