@@ -7,7 +7,6 @@ import cv2
 import cv2.cv as cv
 import cPickle as pickle
 
-
 def get_filename(coin_id, image_id):
     dir = '/home/pkrush/cents-test/' + str(coin_id / 100) + '/'
     filename = dir + str(coin_id).zfill(5) + str(image_id).zfill(2) + '.png'
