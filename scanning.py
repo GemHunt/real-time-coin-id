@@ -273,9 +273,6 @@ coin_id_starts = [0, 380, 1152, 1972, 2674, 2780, 2846, 2946, 3330, 5448]
 def get_start_coin_id():
     return coin_id_starts[len(coin_id_starts) - 1]
 
-save_good_coin_ids()
-sys.exit()
-
 coin_id = get_start_coin_id()
 top_camera, bottom_camera = get_cameras()
 
