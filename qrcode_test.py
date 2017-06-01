@@ -5,7 +5,7 @@ import cv2
 import zbar
 import Image
 import numpy as np
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 #cap.set(3,1920)
 #cap.set(4,1080)
 
@@ -41,23 +41,33 @@ for x in range(0,400000):
     scanner.scan(image)
 
     # extract results
-    for symbol in image:
-        # do something useful with results
-        if symbol.data == "2342":
-            print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
-            loc =  symbol.location
-            print loc
-            cv2.line(output, loc[0],loc[1], (0, 0, 0))
-            cv2.line(output, loc[1], loc[2], (0, 0, 0))
-            cv2.line(output, loc[2], loc[3], (0, 0, 0))
-            cv2.line(output, loc[3], loc[0], (0, 0, 0))
-            src = np.array(loc,dtype = np.float32)
-            rad = 3
-            dst = np.float32(((240+rad,240-rad), (240+rad, 320-rad), (320+rad,320-rad), (320+rad,240-rad)))
+    #print"                                             for symbol in image:" + str(len(image.symbols))
 
-            M = cv2.getPerspectiveTransform(src,dst)
-            warped = cv2.warpPerspective(output, M, (1280, 1024))
-            cv2.imshow("warped", warped)
+    if len(image.symbols) == 4:
+        for symbol in image:
+            # do something useful with results
+            if symbol.data in ["0,0","1,0","0,1","1,1"]:
+                #print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
+                loc =  symbol.location
+                print symbol.data ,loc
+                cv2.line(output, loc[0],loc[1], (0, 0, 0))
+                cv2.line(output, loc[1], loc[2], (0, 0, 0))
+                cv2.line(output, loc[2], loc[3], (0, 0, 0))
+                cv2.line(output, loc[3], loc[0], (0, 0, 0))
+                src = np.array(loc,dtype = np.float32)
+                rad = 3
+                #dst = np.float32(((240+rad,240-rad), (240+rad, 320-rad), (320+rad,320-rad), (320+rad,240-rad)))
+                if symbol.data == "0,0":
+                    dst = np.float32(((160, 50), (160, 110), (225, 110), (225, 50)))
+                    M = cv2.getPerspectiveTransform(src,dst)
+                    warped = cv2.warpPerspective(output, M, (640,480))
+                    cv2.imshow("warped", warped)
+                if symbol.data == "1,1":
+                    dst = np.float32(((387,322), (387,387), (452, 387), (452, 322)))
+                    M = cv2.getPerspectiveTransform(src,dst)
+                    warped = cv2.warpPerspective(output, M, (640,480))
+                    cv2.imshow("warped", warped)
+
 
     # show the frame
     cv2.imshow("#iothack15", output)

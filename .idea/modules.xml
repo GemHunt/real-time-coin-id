@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/real-time-coin-id.iml" filepath="$PROJECT_DIR$/.idea/real-time-coin-id.iml" />
+      <module fileurl="file://$USER_HOME$/sail/.idea/sail.iml" filepath="$USER_HOME$/sail/.idea/sail.iml" />
     </modules>
   </component>
 </project>
