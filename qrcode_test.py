@@ -8,8 +8,11 @@ import numpy as np
 import pyqrcode
 import glob
 import random
+import pickle
 
 dir = "/home/pkrush/find-parts-faster/"
+output_width = 960
+output_height = 540
 background_width = 1280
 background_height = 720
 padding = 20
@@ -18,6 +21,9 @@ qr_unscaled_size = 21  # version 1
 qr_size = qr_unscaled_size * qr_scale
 x_qr_interval = background_width - (padding * 2) - qr_size
 y_qr_interval = background_height - (padding * 2) - qr_size
+yes_points = []
+no_points = []
+
 
 def get_qr_code(data,scale):
     qr = pyqrcode.create(data, error='H', version=1, mode='binary')
@@ -28,18 +34,67 @@ def get_qr_code(data,scale):
     qr_code = cv2.resize(qr_code, (qr_code_size, qr_code_size), interpolation=cv2.INTER_AREA)
     return qr_code
 
+def mark(event, x, y, flags, param):
+    global yes_points
+    global no_points
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        yes_points.append((x, y))
+    if event == cv2.EVENT_RBUTTONDOWN:
+        no_points.append((x, y))
+
+def get_points_inside_border(points,border):
+    new_points = []
+    for x,y in points:
+        if x < border:
+            continue
+        if x > output_width - border:
+            continue
+        if y < border:
+            continue
+        if y > output_height - border:
+            continue
+        new_points.append((x,y))
+    return new_points
+
 def view_warped():
+    cv2.namedWindow("Warped")
+    cv2.setMouseCallback("Warped", mark)
+    global yes_points
+    global no_points
+
+
+    yes_points = pickle.load(open(dir + 'yes_points.pickle', "rb"))
+    no_points = pickle.load(open(dir + 'no_points.pickle', "rb"))
+    yes_points = get_points_inside_border(yes_points, 28)
+    no_points = get_points_inside_border(no_points, 28)
+
     crops = []
     for filename in glob.iglob(dir + 'warped/' + '*.png'):
         #crops.append([random.random(), filename])
         crops.append(filename)
     crops.sort()
-    while True:
+
+    loop = True
+
+    while loop:
         for filename in crops:
             crop = cv2.imread(filename)
+            print
+            for marked_point in yes_points:
+                cv2.circle(crop,marked_point, 28, (255, 255,255), 1)
+            for marked_point in no_points:
+                cv2.circle(crop,marked_point, 28, (0,0,0), 1)
+
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(crop, 'Yes:' + str(len(yes_points)) + ' No:' + str(len(no_points)) , (4, 20), font, .7, (0, 255, 0), 2)
             cv2.imshow("Warped", crop)
             if cv2.waitKey(4) & 0xFF == ord('q'):
+                loop = False
                 break
+    pickle.dump(yes_points, open(dir + 'yes_points.pickle', "wb"))
+    pickle.dump(no_points, open(dir + 'no_points.pickle', "wb"))
+
 
 def display_background():
     background = np.zeros((background_height,background_width), dtype=np.uint8)
@@ -151,11 +206,11 @@ def process_video():
 
                 M = cv2.getPerspectiveTransform(max_src, max_dst)
                 warped = cv2.warpPerspective(output, M, (background_width-(padding*2),background_height-(padding*2)))
-                warped = cv2.resize(warped, (960, 540), interpolation=cv2.INTER_AREA)
+                warped = cv2.resize(warped, (output_width, output_height), interpolation=cv2.INTER_AREA)
                 cv2.imwrite(dir + 'warped/' + str(count).zfill(5) + '.png', warped)
                 cv2.imshow("warped", warped)
 
-        output = cv2.resize(output, (960, 540), interpolation=cv2.INTER_AREA)
+        output = cv2.resize(output, (output_width, output_height), interpolation=cv2.INTER_AREA)
         cv2.imshow("Camera", output)
         print '4 in %s seconds' % (time.time() - start_time,)
 
