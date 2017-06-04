@@ -69,32 +69,57 @@ def view_warped():
     yes_points = get_points_inside_border(yes_points, 28)
     no_points = get_points_inside_border(no_points, 28)
 
-    crops = []
+    warped_filenames = []
     for filename in glob.iglob(dir + 'warped/' + '*.png'):
         #crops.append([random.random(), filename])
-        crops.append(filename)
-    crops.sort()
-
+        warped_filenames.append(filename)
+    warped_filenames.sort()
     loop = True
-
     while loop:
-        for filename in crops:
-            crop = cv2.imread(filename)
-            print
+        for filename in warped_filenames:
+            warped = cv2.imread(filename)
             for marked_point in yes_points:
-                cv2.circle(crop,marked_point, 28, (255, 255,255), 1)
+                cv2.circle(warped,marked_point, 28, (255, 255,255), 1)
             for marked_point in no_points:
-                cv2.circle(crop,marked_point, 28, (0,0,0), 1)
+                cv2.circle(warped,marked_point, 28, (0,0,0), 1)
 
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(crop, 'Yes:' + str(len(yes_points)) + ' No:' + str(len(no_points)) , (4, 20), font, .7, (0, 255, 0), 2)
-            cv2.imshow("Warped", crop)
+            cv2.putText(warped, 'Yes:' + str(len(yes_points)) + ' No:' + str(len(no_points)) , (4, 20), font, .7, (0, 255, 0), 2)
+            cv2.imshow("Warped", warped)
             if cv2.waitKey(4) & 0xFF == ord('q'):
                 loop = False
                 break
     pickle.dump(yes_points, open(dir + 'yes_points.pickle', "wb"))
     pickle.dump(no_points, open(dir + 'no_points.pickle', "wb"))
 
+
+def create_train_dir():
+    global yes_points
+    global no_points
+
+    yes_points = pickle.load(open(dir + 'yes_points.pickle', "rb"))
+    no_points = pickle.load(open(dir + 'no_points.pickle', "rb"))
+
+    warped_filenames = []
+    for filename in glob.iglob(dir + 'warped/' + '*.png'):
+        #crops.append([random.random(), filename])
+        warped_filenames.append(filename)
+        warped_filenames.sort()
+
+    for filename in warped_filenames:
+        warped = cv2.imread(filename)
+        for x,y in yes_points:
+            crop = warped[y-28:y+28, x-28:x+28]
+            m = cv2.getRotationMatrix2D((28, 28), angle, 1)
+            cv2.warpAffine(rot_image, m, (56, 56), rot_image, cv2.INTER_CUBIC)
+            # This is hard coded for 28x28.
+
+
+            cv2.circle(crop,marked_point, 28, (255, 255,255), 1)
+
+
+        for marked_point in no_points:
+            ###
 
 def display_background():
     background = np.zeros((background_height,background_width), dtype=np.uint8)
