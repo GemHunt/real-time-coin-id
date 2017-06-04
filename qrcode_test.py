@@ -57,17 +57,14 @@ def get_points_inside_border(points,border):
         new_points.append((x,y))
     return new_points
 
-def view_warped():
+def label_warped():
     cv2.namedWindow("Warped")
     cv2.setMouseCallback("Warped", mark)
     global yes_points
     global no_points
 
-
     yes_points = pickle.load(open(dir + 'yes_points.pickle', "rb"))
     no_points = pickle.load(open(dir + 'no_points.pickle', "rb"))
-    yes_points = get_points_inside_border(yes_points, 28)
-    no_points = get_points_inside_border(no_points, 28)
 
     warped_filenames = []
     for filename in glob.iglob(dir + 'warped/' + '*.png'):
@@ -77,6 +74,9 @@ def view_warped():
     loop = True
     while loop:
         for filename in warped_filenames:
+            yes_points = get_points_inside_border(yes_points, 28)
+            no_points = get_points_inside_border(no_points, 28)
+
             warped = cv2.imread(filename)
             for marked_point in yes_points:
                 cv2.circle(warped,marked_point, 28, (255, 255,255), 1)
@@ -93,7 +93,18 @@ def view_warped():
     pickle.dump(no_points, open(dir + 'no_points.pickle', "wb"))
 
 
-def create_train_dir():
+def save_crops(warped, points,filename_start):
+    for x, y in points:
+        crop0 = warped[y - 28:y + 28, x - 28:x + 28]
+        crop = crop0.copy()
+        angle = random.random() * 360
+        m = cv2.getRotationMatrix2D((28, 28), angle, 1)
+        cv2.warpAffine(crop, m, (56, 56), crop, cv2.INTER_CUBIC)
+        crop_filename = filename_start + 'id' + str(x).zfill(4) + 'x' + str(y).zfill(4) + 'y' + '.png'
+        cv2.imwrite(crop_filename, crop)
+
+
+def fill_train_dir():
     global yes_points
     global no_points
 
@@ -108,18 +119,14 @@ def create_train_dir():
 
     for filename in warped_filenames:
         warped = cv2.imread(filename)
-        for x,y in yes_points:
-            crop = warped[y-28:y+28, x-28:x+28]
-            m = cv2.getRotationMatrix2D((28, 28), angle, 1)
-            cv2.warpAffine(rot_image, m, (56, 56), rot_image, cv2.INTER_CUBIC)
-            # This is hard coded for 28x28.
+        warped = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+        warped_id = str(filename).replace('.png','')
+        warped_id = warped_id[(len(warped_id)-5):] #last 5 is ID
 
-
-            cv2.circle(crop,marked_point, 28, (255, 255,255), 1)
-
-
-        for marked_point in no_points:
-            ###
+        filename_start = dir + 'train/yes/'+  warped_id
+        save_crops(warped, yes_points,filename_start)
+        filename_start = dir + 'train/no/' + warped_id
+        save_crops(warped, no_points, filename_start)
 
 def display_background():
     background = np.zeros((background_height,background_width), dtype=np.uint8)
@@ -248,4 +255,5 @@ def process_video():
 
 #display_background()
 #process_video()
-view_warped()
+#label_warped()
+fill_train_dir()
